@@ -124,3 +124,94 @@ docker run -d \
  ubuntu-ws:v1
 ```
 
+---
+
+### F. Verifikasi dan Akses Web Server
+
+#### 8. Persiapkan folder aplikasi dan uploads
+Jika folder `/var/mywww` belum berisi aplikasi, clone repository LKPD 2:
+```bash
+sudo mkdir -p /var/mywww
+sudo git clone https://github.com/Deri-Nugroho/docker-2.git /var/mywww
+sudo chown -R $USER:$USER /var/mywww
+sudo mkdir -p /var/mywww/uploads
+sudo chown -R www-data:www-data /var/mywww/uploads
+sudo chmod 755 /var/mywww/uploads
+```
+
+#### 9. Buat database yang dibutuhkan aplikasi
+```bash
+docker exec -it dbserver mariadb -u root -ppass123 -e "CREATE DATABASE toko_db;"
+```
+
+#### 10. Verifikasi semua container berjalan
+```bash
+docker ps
+```
+Pastikan `dbserver` dan `webserver1` berstatus `Up`.
+
+#### 11. Cek aplikasi bisa diakses
+```bash
+curl http://localhost:8001
+```
+Atau buka lewat browser: `http://<IP-server>:8001`
+
+#### 12. Cek koneksi webserver ke dbserver (dari dalam container)
+```bash
+docker exec -it webserver1 bash -c "mysql -h dbserver -u root -ppass123 -e 'SHOW DATABASES;'"
+```
+
+#### 13. Verifikasi tabel database dan data dummy
+```bash
+# Cek tabel
+docker exec -it webserver1 bash -c "mysql -h dbserver -u root -ppass123 toko_db -e 'SHOW TABLES;'"
+
+# Cek data users
+docker exec -it webserver1 bash -c "mysql -h dbserver -u root -ppass123 toko_db -e 'SELECT username, nama_lengkap, role FROM users;'"
+
+# Cek data barang
+docker exec -it webserver1 bash -c "mysql -h dbserver -u root -ppass123 toko_db -e 'SELECT * FROM barang;'"
+```
+
+---
+
+### G. Perintah Bantuan (Troubleshooting)
+
+| Kebutuhan | Command |
+|-----------|---------|
+| Lihat log container | `docker logs -f webserver1` |
+| Masuk ke shell container yang jalan | `docker exec -it webserver1 bash` |
+| Restart container | `docker restart webserver1` |
+| Lihat network & container yang tergabung | `docker network inspect mynet` |
+| Hapus semua container (reset total) | `docker rm -f webserver1 dbserver` |
+| Hapus network | `docker network rm mynet` |
+
+---
+
+### Informasi Aplikasi
+
+Aplikasi ini adalah Toko Sederhana berbasis web menggunakan PHP native (mysqli), Bootstrap 5, dan MySQL.
+
+**Fitur Utama:**
+- 🔐 Login multi-role: `admin`, `kasir`, `gudang`
+- 📦 Manajemen Barang: tambah, edit, hapus, upload foto, pencarian
+- 🏷️ Manajemen Kategori barang
+- 🧾 Point of Sale (POS): keranjang belanja, hitung kembalian, cetak struk
+- 📊 Laporan Penjualan: filter tanggal, total omset, barang terlaris
+- 👥 Manajemen User: tambah/edit/hapus user & role (khusus admin)
+- ⚙️ Auto setup database: tabel & data dummy dibuat otomatis jika belum ada
+
+**Akun Demo (Dummy):**
+| Username | Password | Role |
+|----------|----------|------|
+| admin | 123 | admin |
+| kasir | 123 | kasir |
+| gudang | 123 | gudang |
+
+⚠️ **Penting:** Ganti password akun-akun ini sebelum digunakan di lingkungan produksi.
+
+---
+
+### Catatan
+Password "pass123" pada dokumen ini hanya untuk keperluan pembelajaran/lokal. Untuk lingkungan produksi, gunakan password yang kuat dan pertimbangkan menyimpan kredensial melalui Docker secret atau file `.env`, bukan langsung di command line.
+
